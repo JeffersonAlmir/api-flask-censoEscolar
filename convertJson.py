@@ -18,9 +18,9 @@ def conversorCsvJson(csv_file,filtroCol,filtro,colList):
         print(f"Arquivo não encontrado: {csv_file}")
     
 
-csv_file ="/home/jefferson/pweb2/microdados_ed_basica_2024.csv"
+csv_file ="C:/Users/Jefferson/Documents/microdados_ed_basica_2024.csv"
 
-cols = ['CO_ENTIDADE','NO_REGIAO','NO_UF','SG_UF','NO_MUNICIPIO','NO_MESORREGIAO','NO_MICRORREGIAO','NO_ENTIDADE',
+cols = ['CO_ENTIDADE','NO_REGIAO','NO_UF','SG_UF','NO_MUNICIPIO','CO_MESORREGIAO','NO_MESORREGIAO','CO_MICRORREGIAO','NO_MICRORREGIAO','NO_ENTIDADE',
         'QT_MAT_BAS','QT_MAT_INF','QT_MAT_FUND','QT_MAT_MED','QT_MAT_MED_CT','QT_MAT_MED_NM',
         'QT_MAT_PROF','QT_MAT_PROF_TEC','QT_MAT_EJA','QT_MAT_EJA_FUND','QT_MAT_EJA_MED','QT_MAT_ESP']
 
