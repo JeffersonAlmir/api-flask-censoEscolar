@@ -38,7 +38,7 @@ def armazenar_microdados_educacao(database, entidades_info):
         cursor = connection.cursor() 
             
             #passo3
-        with open('schema.sql') as file:
+        with open('schemas/entidadeSchema.sql') as file:
             cursor.executescript(file.read())
 
             
@@ -92,6 +92,7 @@ if __name__ == "__main__":
     url ='https://servicodados.ibge.gov.br/api/v1/localidades/regioes/2/municipios'
     dataList = extratorDados(url)
     totalUpdate = atualizarMicro_e_Meso(database , dataList)
+    print('concluido')
 
 
 

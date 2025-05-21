@@ -13,13 +13,9 @@ def armazenarDados(dados):
     try:
         connection = sqlite3.connect('entidades.db')
         cursor = connection.cursor()
-        cursor.execute(
-            """CREATE TABLE IF NOT EXISTS UF(
-                CO_UF INTEGER PRIMARY KEY,
-                NO_UF TEXT NOT NULL,
-                SG_UF TEXT NOT NULL
-            );""")
-        
+        with open('schemas/ufSchema.sql') as file:
+            cursor.executescript(file.read())
+
         cursor.executemany("""INSERT INTO UF(CO_UF ,NO_UF, SG_UF)VALUES(? ,? ,?);""",ufsList)
         
         connection.commit()

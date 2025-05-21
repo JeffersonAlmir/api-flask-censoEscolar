@@ -14,13 +14,8 @@ def armazenarDados(dados):
     try:
         connection = sqlite3.connect('entidades.db')
         cursor = connection.cursor()
-        cursor.execute(
-            """CREATE TABLE IF NOT EXISTS Municipio(
-                CO_MUNICIPIO INTEGER PRIMARY KEY,
-                NO_MUNICIPIO TEXT NOT NULL,
-                CO_UF INTEGER NOT NULL,
-                FOREIGN KEY (CO_UF) REFERENCES UF(CO_UF) 
-            );""")
+        with open('schemas/municipioSchema.sql') as file:
+            cursor.executescript(file.read())
         
         cursor.executemany("""INSERT INTO Municipio(CO_MUNICIPIO, NO_MUNICIPIO, CO_UF)VALUES(? ,?, ?);""",municipiosList)
         

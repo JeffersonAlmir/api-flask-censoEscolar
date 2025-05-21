@@ -31,6 +31,8 @@ def index():
 
 @app.get("/instituicoes")
 def getInstituicoesResource():
+    print("Get - Instituições")
+
     try:
         page = request.args.get("page",1, type = int)
         limit = request.args.get("limit",1, type = int)
@@ -143,7 +145,7 @@ def deleteInstituicaoResource(id):
 
 @app.post("/instituicoes")
 def createInstituicaoResource():
-
+    print("Post - Instituição")
     instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
 
     try:

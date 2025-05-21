@@ -15,13 +15,8 @@ def armazenarDados(dados):
     try:
         connection = sqlite3.connect('entidades.db')
         cursor = connection.cursor()
-        cursor.execute(
-            """CREATE TABLE IF NOT EXISTS Mesorregiao(
-                CO_MESORREGIAO INTEGER PRIMARY KEY,
-                NO_MESORREGIAO TEXT NOT NULL,
-                CO_UF INTEGER NOT NULL,
-                FOREIGN KEY (CO_UF) REFERENCES UF(CO_UF) 
-            );""")
+        with open('schemas/mesorregiaoSchema.sql') as file:
+            cursor.executescript(file.read())
         
         cursor.executemany("""INSERT INTO Mesorregiao(CO_MESORREGIAO, NO_MESORREGIAO, CO_UF) VALUES (? ,?, ?);""",mesorregiaoSet)
         
