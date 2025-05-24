@@ -151,39 +151,49 @@ def createInstituicaoResource():
     try:
         instituicaoData = request.get_json()
         instituicaoJson = instituicaoEnsinoSchema.load(instituicaoData)
-       
-        keysList = ['co_entidade', 'no_entidade','co_uf', 'no_uf', 'sg_uf', 'co_municipio', 'no_municipio',
-                    'co_mesorregiao', 'no_mesorregiao', 'co_microrregiao', 'no_microrregiao',
-                    'qt_mat_bas', 'qt_mat_inf', 'qt_mat_fund', 'qt_mat_med', 'qt_mat_med_ct', 'qt_mat_med_nm',
-                    'qt_mat_prof', 'qt_mat_prof_tec', 'qt_mat_eja', 'qt_mat_esp']
-        
-        instituicao = tuple(instituicaoJson[key] for key in keysList)
 
         conn = getConnection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM Entidades WHERE CO_ENTIDADE = ?',(instituicaoJson['co_entidade'],))
         existe = cursor.fetchone()
-        
+      
         if existe:
             return jsonify({"mensagem":"Instituição de ensino já existe."}), 409
-        
+      
+      
         cursor.execute("""
                     INSERT INTO Entidades
-                       (CO_ENTIDADE, NO_ENTIDADE, CO_UF, NO_UF, SG_UF, CO_MUNICIPIO, NO_MUNICIPIO, 
-                        CO_MESORREGIAO, NO_MESORREGIAO, CO_MICRORREGIAO, NO_MICRORREGIAO, QT_MAT_BAS, QT_MAT_INF, QT_MAT_FUND,
-                        QT_MAT_MED, QT_MAT_MED_CT, QT_MAT_MED_NM, QT_MAT_PROF, QT_MAT_PROF_TEC, QT_MAT_EJA, QT_MAT_ESP)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""",instituicao)
-        
-        instituicaoEnsino = InstituicaoEnsino(*instituicao)
-        
-        conn.commit()
+                        (CO_ENTIDADE, NO_ENTIDADE, CO_UF, CO_MUNICIPIO, CO_MESORREGIAO, CO_MICRORREGIAO,
+                        QT_MAT_BAS, QT_MAT_INF, QT_MAT_FUND, QT_MAT_MED, QT_MAT_MED_CT, QT_MAT_MED_NM, 
+                        QT_MAT_PROF, QT_MAT_PROF_TEC, QT_MAT_EJA, QT_MAT_ESP)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );""",
+                   (instituicaoJson["co_entidade"], instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
+                    instituicaoJson["co_municipio"], instituicaoJson["co_mesorregiao"], instituicaoJson["co_microrregiao"],
+                    instituicaoJson["qt_mat_bas"], instituicaoJson["qt_mat_inf"], instituicaoJson["qt_mat_fund"],
+                    instituicaoJson["qt_mat_med"], instituicaoJson["qt_mat_med_ct"], instituicaoJson["qt_mat_med_nm"],
+                    instituicaoJson["qt_mat_prof"], instituicaoJson["qt_mat_prof_tec"], instituicaoJson["qt_mat_eja"], 
+                    instituicaoJson["qt_mat_esp"]
+                    ))
 
-   
+
+        instituicaoEnsino = InstituicaoEnsino(instituicaoJson["co_entidade"], instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
+                    instituicaoJson["no_uf"], instituicaoJson["sg_uf"],instituicaoJson["co_municipio"], instituicaoJson["no_municipio"] ,
+                    instituicaoJson["co_mesorregiao"], instituicaoJson["no_mesorregiao"], instituicaoJson["co_microrregiao"],
+                    instituicaoJson["no_microrregiao"], instituicaoJson["qt_mat_bas"], instituicaoJson["qt_mat_inf"], 
+                    instituicaoJson["qt_mat_fund"], instituicaoJson["qt_mat_med"], instituicaoJson["qt_mat_med_ct"], 
+                    instituicaoJson["qt_mat_med_nm"], instituicaoJson["qt_mat_prof"], instituicaoJson["qt_mat_prof_tec"], 
+                    instituicaoJson["qt_mat_eja"], instituicaoJson["qt_mat_esp"])
+      
+        conn.commit()
+ 
     except ValidationError as err:
-        return jsonify(err.messages), 400
+       return jsonify(err.messages), 400
+
 
     except sqlite3.Error as e:
-        return jsonify({"mensagem": "Problema com o banco de dados."}), 500
+        print(e)
+        return jsonify({"mensagem": "Problema com o banco de dados. "}), 500
+
 
     return jsonify(instituicaoEnsino.toDict()),201
 
@@ -193,15 +203,9 @@ def updateInstituicaoResource(id):
 
     instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
     try:
-        instituicaoJson = request.get_json()
+        instituicaoData = request.get_json()
+        instituicaoJson = instituicaoEnsinoSchema.load(instituicaoData)
         
-        keysList = ['co_entidade', 'no_entidade','co_uf', 'no_uf', 'sg_uf', 'co_municipio', 'no_municipio',
-                    'co_mesorregiao', 'no_mesorregiao', 'co_microrregiao', 'no_microrregiao',
-                    'qt_mat_bas', 'qt_mat_inf', 'qt_mat_fund', 'qt_mat_med', 'qt_mat_med_ct', 'qt_mat_med_nm',
-                    'qt_mat_prof', 'qt_mat_prof_tec', 'qt_mat_eja', 'qt_mat_esp']
-        
-        instituicao = tuple(instituicaoJson[key] for key in keysList)
-
         conn = getConnection()
         cursor = conn.cursor()
         cursor.execute('SELECT * FROM Entidades WHERE CO_ENTIDADE = ?',(id,))
@@ -212,13 +216,49 @@ def updateInstituicaoResource(id):
         
         cursor.execute(""" 
                 UPDATE Entidades
-                SET NO_ENTIDADE = ?, CO_UF = ?, SG_UF = ?, CO_MUNICIPIO = ?, 
-                    CO_MESORREGIAO = ?,  CO_MICRORREGIAO = ?,  
-                    QT_MAT_BAS = ?, QT_MAT_INF = ?, QT_MAT_FUND = ?, QT_MAT_MED = ?, QT_MAT_MED_CT = ?, 
+                SET NO_ENTIDADE = ?, CO_UF = ?, CO_MUNICIPIO = ?, CO_MESORREGIAO = ?, CO_MICRORREGIAO = ?, QT_MAT_BAS = ?,
+                    QT_MAT_INF = ?, QT_MAT_FUND = ?, QT_MAT_MED = ?, QT_MAT_MED_CT = ?, 
                     QT_MAT_MED_NM = ?, QT_MAT_PROF = ?, QT_MAT_PROF_TEC = ?, QT_MAT_EJA = ?, QT_MAT_ESP = ?
-                WHERE CO_ENTIDADE = ?;""", instituicao[1:] + (id,))
+                WHERE CO_ENTIDADE = ?;""",  ( instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
+                    instituicaoJson["co_municipio"], instituicaoJson["co_mesorregiao"], instituicaoJson["co_microrregiao"],
+                    instituicaoJson["qt_mat_bas"], instituicaoJson["qt_mat_inf"], instituicaoJson["qt_mat_fund"],
+                    instituicaoJson["qt_mat_med"], instituicaoJson["qt_mat_med_ct"], instituicaoJson["qt_mat_med_nm"],
+                    instituicaoJson["qt_mat_prof"], instituicaoJson["qt_mat_prof_tec"], instituicaoJson["qt_mat_eja"], 
+                    instituicaoJson["qt_mat_esp"],id ) )
         
-        instituicaoEnsino = InstituicaoEnsino(*instituicao)
+        cursor.execute('''
+                SELECT 
+                    e.CO_ENTIDADE,
+                    e.NO_ENTIDADE,
+                    e.CO_UF,
+                    u.NO_UF,
+                    u.SG_UF,
+                    e.CO_MUNICIPIO,
+                    m.NO_MUNICIPIO,
+                    e.CO_MESORREGIAO,
+                    meso.NO_MESORREGIAO, 
+                    e.CO_MICRORREGIAO,
+                    micro.NO_MICRORREGIAO,
+                    e.QT_MAT_BAS,
+                    e.QT_MAT_INF,
+                    e.QT_MAT_FUND,
+                    e.QT_MAT_MED,
+                    e.QT_MAT_MED_CT,
+                    e.QT_MAT_MED_NM,
+                    e.QT_MAT_PROF,
+                    e.QT_MAT_PROF_TEC,
+                    e.QT_MAT_EJA,
+                    e.QT_MAT_ESP
+                FROM Entidades e 
+                JOIN UF u ON e.CO_UF = u.CO_UF
+                JOIN  Municipio m  ON e.CO_MUNICIPIO  = m.CO_MUNICIPIO 
+                JOIN Mesorregiao meso ON e.CO_MESORREGIAO  = meso.CO_MESORREGIAO 
+                JOIN Microrregiao micro  ON e.CO_MICRORREGIAO  = micro.CO_MICRORREGIAO 
+                WHERE CO_ENTIDADE = ?;''',(id,))
+        
+        dadosAtualizados = cursor.fetchone()
+        
+        instituicaoEnsino = InstituicaoEnsino(*dadosAtualizados)
         
         conn.commit()
 
