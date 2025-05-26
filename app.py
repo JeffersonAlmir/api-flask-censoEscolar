@@ -1,27 +1,16 @@
-from flask import Flask,request ,jsonify
-import sqlite3
-
-from flask import Flask,request ,jsonify, g
+from flask import request ,jsonify, g
 import sqlite3
 from marshmallow import ValidationError
 
+from helpers.application import app
+from helpers.database import getConnection
+from helpers.CORS import cors
+from helpers.logging import logger
+
 from models.InstituicaoEnsino import InstituicaoEnsino, InstituicaoEnsinoSchema
 
-DATABASE = 'entidades.db'
 
-app = Flask(__name__)
-
-def getConnection():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-    return db
- 
-@app.teardown_appcontext
-def closeConnection(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+cors.init_app(app)
 
 
 @app.route("/")
@@ -31,7 +20,7 @@ def index():
 
 @app.get("/instituicoes")
 def getInstituicoesResource():
-    print("Get - Instituições")
+    logger.info("Get - Instituições")
 
     try:
         page = request.args.get("page",1, type = int)
@@ -75,6 +64,7 @@ def getInstituicoesResource():
         instituicoesEnsino = [InstituicaoEnsino(*row).toDict()  for row in result]
 
     except sqlite3.Error as e:
+        logger.error(f"Erro no banco de dados: {e}")
         return jsonify({"mensagem": "Problema com o banco de dados."}), 500
 
     return jsonify(instituicoesEnsino),200
@@ -83,6 +73,8 @@ def getInstituicoesResource():
 
 @app.get("/instituicoes/<int:id>")
 def getInstituicoesByIdResource(id):
+    logger.info("Get Id - Instituições")
+
     try:
         cursor = getConnection().cursor()
         cursor.execute('''
@@ -117,12 +109,14 @@ def getInstituicoesByIdResource(id):
         row = cursor.fetchone()
 
         if not row:
-             return jsonify({"mensagem":"Instituição de ensino não encontrada."}), 404
+            logger.warning(f"Instituição com ID {id} não encontrada.")
+            return jsonify({"mensagem":"Instituição de ensino não encontrada."}), 404
         
         instituicaoEnsino = InstituicaoEnsino(*row)
         
 
     except sqlite3.Error as e:
+        logger.error(f"Erro no banco de dados: {e}")
         return jsonify({"mensagem": "Problema com o banco de dados."}), 500
     
     return jsonify(instituicaoEnsino.toDict()),200
@@ -131,6 +125,8 @@ def getInstituicoesByIdResource(id):
 
 @app.delete("/instituicoes/<int:id>")
 def deleteInstituicaoResource(id):
+    logger.info("Delete - Instituições")
+
     try:
         conn = getConnection()
         cursor = conn.cursor()
@@ -138,6 +134,7 @@ def deleteInstituicaoResource(id):
         conn.commit()
 
     except sqlite3.Error as e:
+        logger.error(f"Erro no banco de dados: {e}")
         return jsonify({"mensagem": "Problema com o banco de dados."}), 500
 
     return "", 200
@@ -145,7 +142,8 @@ def deleteInstituicaoResource(id):
 
 @app.post("/instituicoes")
 def createInstituicaoResource():
-    print("Post - Instituição")
+    logger.info("Post - Instituições")
+    
     instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
 
     try:
@@ -158,7 +156,8 @@ def createInstituicaoResource():
         existe = cursor.fetchone()
       
         if existe:
-            return jsonify({"mensagem":"Instituição de ensino já existe."}), 409
+            logger.warning(f"Instituição com ID {instituicaoJson['co_entidade']} já existe no Database.")
+            return jsonify({"mensagem":"Instituição de ensino já existe. Cadastro não realizado"}), 406
       
       
         cursor.execute("""
@@ -187,19 +186,19 @@ def createInstituicaoResource():
         conn.commit()
  
     except ValidationError as err:
+       logger.warning(f"Erro de validação: {err.messages}")
        return jsonify(err.messages), 400
 
-
     except sqlite3.Error as e:
-        print(e)
+        logger.error(f"Erro no banco de dados: {e}")
         return jsonify({"mensagem": "Problema com o banco de dados. "}), 500
-
 
     return jsonify(instituicaoEnsino.toDict()),201
 
-
+# corrigir logica do update ainda acho que ta errado
 @app.put("/instituicoes/<int:id>")
 def updateInstituicaoResource(id):
+    logger.info("Put - Instituições")
 
     instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
     try:
@@ -212,6 +211,7 @@ def updateInstituicaoResource(id):
         existe = cursor.fetchone()
         
         if not existe:
+            logger.warning(f"Instituição com ID {id} não encontrada.")
             return jsonify({"mensagem":"Instituição de ensino não encontrada."}), 404
         
         cursor.execute(""" 
@@ -262,7 +262,12 @@ def updateInstituicaoResource(id):
         
         conn.commit()
 
+    except ValidationError as err:
+       logger.warning(f"Erro de validação: {err.messages}")
+       return jsonify(err.messages), 400
+
     except sqlite3.Error as e:
+        logger.error(f"Erro no banco de dados: {e}")
         return jsonify({"mensagem": "Problema com o banco de dados."}), 500
 
     return jsonify(instituicaoEnsino.toDict()),200
