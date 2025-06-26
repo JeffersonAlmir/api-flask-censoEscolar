@@ -1,7 +1,8 @@
 import requests
-import sqlite3
+import psycopg2
 
-DATABASE = 'censoEscolar.db'
+from helpers.database import connectDb
+from helpers.logging import logger
 
 def extrator(url):
     requisicao = requests.get(url)
@@ -10,28 +11,29 @@ def extrator(url):
 
 def armazenarDados(dados):
 
-    mesorregiaoSet = {(municipio ['microrregiao']['mesorregiao']['id'], municipio ['microrregiao']['mesorregiao']['nome'],
-                         municipio ['microrregiao']['mesorregiao']['UF']['id']) for municipio  in dados}
+    mesorregiaoList = [(mesorregiao['id'], mesorregiao['nome'],
+                         mesorregiao['UF']['id']) for mesorregiao  in dados]
     
     try:
-        connection = sqlite3.connect(DATABASE)
-        cursor = connection.cursor()
-        with open('schemas/mesorregiaoSchema.sql') as file:
-            cursor.executescript(file.read())
-        
-        cursor.executemany("""INSERT INTO Mesorregiao(CO_MESORREGIAO, NO_MESORREGIAO, CO_UF) VALUES (? ,?, ?);""",mesorregiaoSet)
+        connection = connectDb()
+        cursor = connection.cursor()  
+        cursor.executemany("""INSERT INTO Mesorregiao(CO_MESORREGIAO, NO_MESORREGIAO, CO_UF) VALUES (%s ,%s, %s);""",mesorregiaoList)
         
         connection.commit()
-    except sqlite3.Error as e:
-        return e
+        logger.info(f"Mesorregião inseridas com sucesso: {len(mesorregiaoList)} registros")
+
+    except psycopg2.Error as e:
+        connection.rollback()
+        logger.error(f"Erro: {e.pgerror}") 
     finally:
+        cursor.close()
         connection.close()
-    return len(mesorregiaoSet)
+    
         
 
 
 if __name__ == "__main__":
-    url ='https://servicodados.ibge.gov.br/api/v1/localidades/regioes/2/municipios'
+    url ='https://servicodados.ibge.gov.br/api/v1/localidades/mesorregioes'
     dados = extrator(url)
-    totalMesorregiao =armazenarDados(dados)
-    print(f"{totalMesorregiao} Mesorregiao adicionadas")
+    armazenarDados(dados)
+    

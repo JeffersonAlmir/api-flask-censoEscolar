@@ -1,5 +1,29 @@
-
 from marshmallow import Schema, fields, validate
+from flask_restful import fields as flaskFields
+
+instituicao_fields = {
+    "co_entidade": flaskFields.Integer,
+    "no_entidade": flaskFields.String,
+    "co_uf": flaskFields.Integer,
+    "no_uf": flaskFields.String,
+    "sg_uf": flaskFields.String,
+    "co_municipio": flaskFields.Integer,
+    "no_municipio": flaskFields.String,
+    "co_mesorregiao": flaskFields.Integer,
+    "no_mesorregiao": flaskFields.String,
+    "co_microrregiao": flaskFields.Integer,
+    "no_microrregiao": flaskFields.String,
+    "qt_mat_bas": flaskFields.Integer,
+    "qt_mat_inf": flaskFields.Integer,
+    "qt_mat_fund": flaskFields.Integer,
+    "qt_mat_med": flaskFields.Integer,
+    "qt_mat_med_ct": flaskFields.Integer,
+    "qt_mat_med_nm": flaskFields.Integer,
+    "qt_mat_prof": flaskFields.Integer,
+    "qt_mat_prof_tec": flaskFields.Integer,
+    "qt_mat_eja": flaskFields.Integer,
+    "qt_mat_esp": flaskFields.Integer
+}
 
 class InstituicaoEnsino:
     
@@ -31,7 +55,7 @@ class InstituicaoEnsino:
 
     def toDict(self):
         return {
-        "no_entidade": self.no_entidade,
+        "co_entidade": self.no_entidade,
         "no_entidade": self.no_entidade,
         "co_uf": self.co_uf,
         "no_uf": self.no_uf,

@@ -1,37 +1,52 @@
 import requests
-import sqlite3
+import psycopg2
 
-DATABASE = 'censoEscolar.db'
+
+from helpers.logging import logger
+from helpers.database import connectDb
 
 def extrator(url):
     requisicao = requests.get(url)
     requisicaoJson = requisicao.json() 
-    return requisicaoJson
 
-def armazenarDados(dados):
-
-    municipiosList = [(municipio['id'], municipio["nome"], 
-                       municipio['microrregiao']['mesorregiao']['UF']['id']) for municipio  in dados]
-    try:
-        connection = sqlite3.connect(DATABASE)
-        cursor = connection.cursor()
-        with open('schemas/municipioSchema.sql') as file:
-            cursor.executescript(file.read())
+    municipiosList = []
+    for municipio in requisicaoJson:
         
-        cursor.executemany("""INSERT INTO Municipio(CO_MUNICIPIO, NO_MUNICIPIO, CO_UF)VALUES(? ,?, ?);""",municipiosList)
+        co_municipio = municipio['id']
+        no_municipio = municipio['nome']
+        if municipio.get('microrregiao') == None :
+            co_uf = municipio['regiao-imediata']['regiao-intermediaria']['UF']['id']
+            
+        else:   
+            co_uf = municipio['microrregiao']['mesorregiao']['UF']['id']
+            
+        municipiosList.append((co_municipio, no_municipio, co_uf))
+
+    return municipiosList
+
+def armazenarDados(municipiosList):
+       
+    try:
+        connection = connectDb()
+        cursor = connection.cursor()
+        
+        cursor.executemany("""INSERT INTO Municipio(CO_MUNICIPIO, NO_MUNICIPIO, CO_UF) VALUES(%s ,%s, %s);""", municipiosList)
         
         connection.commit()
-    except sqlite3.Error as e:
-        return e
+        logger.info(f"Municípios inseridos com sucesso: {len(municipiosList)} registros")
+    except psycopg2.Error as e:
+        connection.rollback()
+        logger.error(f"Erro: {e.pgerror}")
     finally:
+        cursor.close()
         connection.close()
-    return len(municipiosList)
+    
 
      
 
 
 if __name__ == "__main__":
-    url ='https://servicodados.ibge.gov.br/api/v1/localidades/regioes/2/municipios'
-    dados = extrator(url)
-    totalMunicipio =armazenarDados(dados)
-    print(f"{totalMunicipio} Municipios adicionados")
+    url ='https://servicodados.ibge.gov.br/api/v1/localidades/municipios'
+    municipiosList = extrator(url)
+    armazenarDados(municipiosList)
+    
