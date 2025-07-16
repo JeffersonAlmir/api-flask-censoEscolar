@@ -2,6 +2,7 @@ from flask import request
 from flask_restful import Resource , marshal
 import sqlite3
 from marshmallow import ValidationError
+import psycopg2
 
 from helpers.database import getConnection
 from helpers.logging import logger
@@ -49,17 +50,18 @@ class InstituicoesResource(Resource):
                     JOIN  Municipio m  ON e.CO_MUNICIPIO  = m.CO_MUNICIPIO 
                     JOIN Mesorregiao meso ON e.CO_MESORREGIAO  = meso.CO_MESORREGIAO 
                     JOIN Microrregiao micro  ON e.CO_MICRORREGIAO  = micro.CO_MICRORREGIAO 
-                    LIMIT ? OFFSET ?;''',(limit,offset))
+                    LIMIT %s OFFSET %s;''',(limit,offset))
 
 
             result = cursor.fetchall()
             instituicoesEnsino = [InstituicaoEnsino(*row) for row in result]
 
-        except sqlite3.Error as e:
+            return marshal(instituicoesEnsino, instituicao_fields),200
+        
+        except psycopg2.Error as e:  
             logger.error(f"Erro no banco de dados: {e}")
             return {"mensagem": "Problema com o banco de dados."}, 500
 
-        return marshal(instituicoesEnsino, instituicao_fields),200
     
 
     def post(self):
@@ -73,7 +75,7 @@ class InstituicoesResource(Resource):
 
             conn = getConnection()
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM Entidades WHERE CO_ENTIDADE = ?',(instituicaoJson['co_entidade'],))
+            cursor.execute('SELECT * FROM Entidades WHERE CO_ENTIDADE = %s',(instituicaoJson['co_entidade'],))
             existe = cursor.fetchone()
         
             if existe:
@@ -86,7 +88,7 @@ class InstituicoesResource(Resource):
                             (CO_ENTIDADE, NO_ENTIDADE, CO_UF, CO_MUNICIPIO, CO_MESORREGIAO, CO_MICRORREGIAO,
                             QT_MAT_BAS, QT_MAT_INF, QT_MAT_FUND, QT_MAT_MED, QT_MAT_MED_CT, QT_MAT_MED_NM, 
                             QT_MAT_PROF, QT_MAT_PROF_TEC, QT_MAT_EJA, QT_MAT_ESP)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );""",
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s );""",
                     (instituicaoJson["co_entidade"], instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
                         instituicaoJson["co_municipio"], instituicaoJson["co_mesorregiao"], instituicaoJson["co_microrregiao"],
                         instituicaoJson["qt_mat_bas"], instituicaoJson["qt_mat_inf"], instituicaoJson["qt_mat_fund"],
@@ -105,6 +107,7 @@ class InstituicoesResource(Resource):
                         instituicaoJson["qt_mat_eja"], instituicaoJson["qt_mat_esp"])
         
             conn.commit()
+            return marshal(instituicaoEnsino, instituicao_fields),201   
     
         except ValidationError as err:
             logger.warning(f"Erro de validação: {err.messages}")
@@ -113,8 +116,24 @@ class InstituicoesResource(Resource):
         except sqlite3.Error as e:
             logger.error(f"Erro no banco de dados: {e}")
             return {"mensagem": "Problema com o banco de dados. "}, 500
+        
+    def get():
+        logger.info("Get Ano")
+        try:
 
-        return marshal(instituicaoEnsino, instituicao_fields),201
+            cursor = getConnection().cursor()
+            cursor.execute("""
+                SELECT DISTINCT e.ano_censo FROM entidades e
+                ORDER BY e.ano_censo DESC;
+            """)
+
+            anos = [ano for ano in cursor.fetchall()]
+            return {"anos": anos}
+        
+        except psycopg2.Error as e:  
+            logger.error(f"Erro no banco de dados: {e}")
+            return {"mensagem": "Problema com o banco de dados."}, 500
+
 
 
 
@@ -153,7 +172,7 @@ class InstituicaoResource(Resource):
                     JOIN  Municipio m  ON e.CO_MUNICIPIO  = m.CO_MUNICIPIO 
                     JOIN Mesorregiao meso ON e.CO_MESORREGIAO  = meso.CO_MESORREGIAO 
                     JOIN Microrregiao micro  ON e.CO_MICRORREGIAO  = micro.CO_MICRORREGIAO 
-                    WHERE CO_ENTIDADE = ?;''',(id,))
+                    WHERE CO_ENTIDADE = %s;''',(id,))
             row = cursor.fetchone()
 
             if not row:
@@ -189,10 +208,10 @@ class InstituicaoResource(Resource):
             
             cursor.execute(""" 
                     UPDATE Entidades
-                    SET NO_ENTIDADE = ?, CO_UF = ?, CO_MUNICIPIO = ?, CO_MESORREGIAO = ?, CO_MICRORREGIAO = ?, QT_MAT_BAS = ?,
-                        QT_MAT_INF = ?, QT_MAT_FUND = ?, QT_MAT_MED = ?, QT_MAT_MED_CT = ?, 
-                        QT_MAT_MED_NM = ?, QT_MAT_PROF = ?, QT_MAT_PROF_TEC = ?, QT_MAT_EJA = ?, QT_MAT_ESP = ?
-                    WHERE CO_ENTIDADE = ?;""",  ( instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
+                    SET NO_ENTIDADE = %s, CO_UF = %s, CO_MUNICIPIO = %s, CO_MESORREGIAO = %s, CO_MICRORREGIAO = %s, QT_MAT_BAS = %s,
+                        QT_MAT_INF = %s, QT_MAT_FUND = %s, QT_MAT_MED = %s, QT_MAT_MED_CT = %s, 
+                        QT_MAT_MED_NM = %s, QT_MAT_PROF = %s, QT_MAT_PROF_TEC = %s, QT_MAT_EJA = %s, QT_MAT_ESP = %s
+                    WHERE CO_ENTIDADE = %s;""",  ( instituicaoJson["no_entidade"], instituicaoJson["co_uf"],
                         instituicaoJson["co_municipio"], instituicaoJson["co_mesorregiao"], instituicaoJson["co_microrregiao"],
                         instituicaoJson["qt_mat_bas"], instituicaoJson["qt_mat_inf"], instituicaoJson["qt_mat_fund"],
                         instituicaoJson["qt_mat_med"], instituicaoJson["qt_mat_med_ct"], instituicaoJson["qt_mat_med_nm"],
@@ -227,7 +246,7 @@ class InstituicaoResource(Resource):
                     JOIN  Municipio m  ON e.CO_MUNICIPIO  = m.CO_MUNICIPIO 
                     JOIN Mesorregiao meso ON e.CO_MESORREGIAO  = meso.CO_MESORREGIAO 
                     JOIN Microrregiao micro  ON e.CO_MICRORREGIAO  = micro.CO_MICRORREGIAO 
-                    WHERE CO_ENTIDADE = ?;''',(id,))
+                    WHERE CO_ENTIDADE = %s;''',(id,))
             
             dadosAtualizados = cursor.fetchone()
             
@@ -237,7 +256,7 @@ class InstituicaoResource(Resource):
 
         except ValidationError as err:
             logger.warning(f"Erro de validação: {err.messages}")
-            return {"mensagem": "Problema com a validação. " +err. messages},400
+            return {"mensagem": "Problema com a validação. " + err. messages},400
 
         except sqlite3.Error as e:
             logger.error(f"Erro no banco de dados: {e}")
@@ -252,7 +271,7 @@ class InstituicaoResource(Resource):
         try:
             conn = getConnection()
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM Entidades WHERE CO_ENTIDADE = ?",(id,))
+            cursor.execute("DELETE FROM Entidades WHERE CO_ENTIDADE = %s",(id,))
             conn.commit()
 
         except sqlite3.Error as e:
@@ -260,3 +279,76 @@ class InstituicaoResource(Resource):
             return {"mensagem": "Problema com o banco de dados."}, 500
 
         return {"mensagem": "Removido com sucesso."}, 200
+    
+    
+    
+class InstituicoesConsultaResource(Resource):
+    def get(self):
+        logger.info("Get Ano")
+        try:
+
+            cursor = getConnection().cursor()
+            cursor.execute("""
+                SELECT DISTINCT e.ano_censo FROM entidades e
+                ORDER BY e.ano_censo DESC;
+            """)
+            anos = cursor.fetchall()
+            lista_anos = [{"ano": ano[0]} for ano in anos]
+            
+            return lista_anos, 200  
+        
+        except psycopg2.Error as e:  
+            logger.error(f"Erro no banco de dados: {e}")
+            return {"mensagem": "Problema com o banco de dados."}, 500
+        
+
+class InstituicoesConsultaPorAnoResource(Resource):
+    def get(self):
+        logger.info("Get Quantidade matriculas")
+        try:
+            ano_censo = request.args.get("ano", default=2023, type = int)
+
+            cursor = getConnection().cursor()
+            cursor.execute("""
+                SELECT  
+                uf.no_uf, 
+                SUM(qt_mat_bas) AS qt_mat_bas, 
+                e.ano_censo 
+                FROM entidades e
+                JOIN uf ON e.co_uf = uf.co_uf
+                WHERE e.ano_censo = %s
+                GROUP BY  e.ano_censo, uf.no_uf ;
+            """,(ano_censo,))
+            requisicoesData = cursor.fetchall()
+            lista =[{'estado': data[0],'matriculas': data[1]}for data in requisicoesData]
+            
+            return lista, 200  
+        
+        except psycopg2.Error as e:  
+            logger.error(f"Erro no banco de dados: {e}")
+            return {"mensagem": "Problema com o banco de dados."}, 500
+        
+class InstituicoesPorCidadeResource(Resource):
+    def get(self):
+        logger.info("Get Quantidade matriculas por cidade")
+        try:
+            ano_censo = request.args.get("ano", default=2023, type = int)
+            sigla = request.args.get("sigla",'', type = str)
+
+            cursor = getConnection().cursor()
+            cursor.execute("""
+                SELECT m.no_municipio, SUM(e.qt_mat_bas), u.sg_uf
+                FROM entidades e
+                JOIN municipio m ON e.co_municipio = m.co_municipio
+                JOIN uf u ON u.co_uf = e.co_uf 
+                WHERE e.ano_censo = %s and  u.sg_uf = %s
+                GROUP BY m.no_municipio, u.sg_uf;
+            """,(ano_censo,sigla))
+            requisicoesData = cursor.fetchall()
+            lista =[{'cidade': data[0],'matriculas': data[1]}for data in requisicoesData]
+            
+            return lista, 200  
+        
+        except psycopg2.Error as e:  
+            logger.error(f"Erro no banco de dados: {e}")
+            return {"mensagem": "Problema com o banco de dados."}, 500
