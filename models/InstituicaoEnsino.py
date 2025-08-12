@@ -1,18 +1,34 @@
 from marshmallow import Schema, fields, validate
 from flask_restful import fields as flaskFields
+from sqlalchemy import Integer, String, ForeignKey
+from sqlalchemy.orm import  Mapped, mapped_column, relationship
+
+from helpers.database import db
+
+ano_fields = {
+    'nu_ano_censo': flaskFields.Integer,
+}
 
 instituicao_fields = {
     "co_entidade": flaskFields.Integer,
     "no_entidade": flaskFields.String,
-    "co_uf": flaskFields.Integer,
-    "no_uf": flaskFields.String,
-    "sg_uf": flaskFields.String,
-    "co_municipio": flaskFields.Integer,
-    "no_municipio": flaskFields.String,
-    "co_mesorregiao": flaskFields.Integer,
-    "no_mesorregiao": flaskFields.String,
-    "co_microrregiao": flaskFields.Integer,
-    "no_microrregiao": flaskFields.String,
+    "uf": flaskFields.Nested({
+        "co_uf": flaskFields.Integer,
+        "no_uf": flaskFields.String,
+        "sg_uf": flaskFields.String
+    }),
+    "mesorregiao": flaskFields.Nested({
+        "co_mesorregiao": flaskFields.Integer,
+        "no_mesorregiao": flaskFields.String
+    }),
+    "microrregiao": flaskFields.Nested({
+        "co_microrregiao": flaskFields.Integer,
+        "no_microrregiao": flaskFields.String
+    }),
+    "municipio": flaskFields.Nested({
+        "co_municipio": flaskFields.Integer,
+        "no_municipio": flaskFields.String
+    }),
     "qt_mat_bas": flaskFields.Integer,
     "qt_mat_inf": flaskFields.Integer,
     "qt_mat_fund": flaskFields.Integer,
@@ -22,26 +38,51 @@ instituicao_fields = {
     "qt_mat_prof": flaskFields.Integer,
     "qt_mat_prof_tec": flaskFields.Integer,
     "qt_mat_eja": flaskFields.Integer,
-    "qt_mat_esp": flaskFields.Integer
+    "qt_mat_esp": flaskFields.Integer,
+    "nu_ano_censo": flaskFields.Integer,
 }
 
-class InstituicaoEnsino:
+class InstituicaoEnsino(db.Model):
+    __tablename__ ="tb_instituicao_ensino"
+
+    co_entidade: Mapped[int] = mapped_column(Integer,primary_key=True)
+    no_entidade:Mapped[str] = mapped_column(String(100))
+    nu_ano_censo: Mapped[int] = mapped_column(Integer,primary_key=True)
+
+    co_uf: Mapped[int] = mapped_column(ForeignKey("tb_uf.co_uf"))                            
+    co_municipio: Mapped[int] = mapped_column(ForeignKey("tb_municipio.co_municipio"))
+    co_mesorregiao: Mapped[int] = mapped_column(ForeignKey("tb_mesorregiao.co_mesorregiao"))
+    co_microrregiao : Mapped[int] = mapped_column(ForeignKey("tb_microrregiao.co_microrregiao"))
     
-    def __init__(self, co_entidade, no_entidade, co_uf, no_uf, sg_uf ,co_municipio ,no_municipio, 
-    co_mesorregiao, no_mesorregiao, co_microrregiao, no_microrregiao, qt_mat_bas, qt_mat_inf, qt_mat_fund, qt_mat_med, 
-    qt_mat_med_ct, qt_mat_med_nm, qt_mat_prof, qt_mat_prof_tec, qt_mat_eja, qt_mat_esp):
+    qt_mat_bas : Mapped[int] = mapped_column(Integer)
+    qt_mat_inf : Mapped[int] = mapped_column(Integer)
+    qt_mat_fund : Mapped[int] = mapped_column(Integer)
+    qt_mat_med: Mapped[int] = mapped_column(Integer)
+    qt_mat_med_ct : Mapped[int] = mapped_column(Integer)
+    qt_mat_med_nm : Mapped[int] = mapped_column(Integer)
+    qt_mat_prof: Mapped[int] = mapped_column(Integer)
+    qt_mat_prof_tec: Mapped[int] = mapped_column(Integer)
+    qt_mat_eja : Mapped[int] = mapped_column(Integer)
+    qt_mat_esp : Mapped[int] = mapped_column(Integer)
+
+    uf = relationship("Uf",back_populates="instituicao")
+    microrregiao = relationship("Microrregiao", back_populates="instituicao",cascade="save-update")
+    mesorregiao = relationship("Mesorregiao", back_populates="instituicao",cascade="save-update")
+    municipio = relationship("Municipio", back_populates="instituicao",cascade="save-update")
+
+
+    
+    def __init__(self, co_entidade:int, no_entidade:str, co_uf:int, co_municipio:int, 
+                co_mesorregiao:int, co_microrregiao:int, qt_mat_bas:int, qt_mat_inf:int, qt_mat_fund:int,
+                  qt_mat_med:int, qt_mat_med_ct:int, qt_mat_med_nm:int, qt_mat_prof:int, qt_mat_prof_tec:int, 
+                  qt_mat_eja:int, qt_mat_esp:int, nu_ano_censo:int):
         
         self.co_entidade = co_entidade
         self.no_entidade = no_entidade
         self.co_uf = co_uf
-        self.no_uf = no_uf
-        self.sg_uf = sg_uf
         self.co_municipio = co_municipio
-        self.no_municipio = no_municipio
         self.co_mesorregiao = co_mesorregiao
-        self.no_mesorregiao = no_mesorregiao
         self.co_microrregiao = co_microrregiao
-        self.no_microrregiao = no_microrregiao
         self.qt_mat_bas = qt_mat_bas
         self.qt_mat_inf = qt_mat_inf
         self.qt_mat_fund = qt_mat_fund
@@ -52,58 +93,21 @@ class InstituicaoEnsino:
         self.qt_mat_prof_tec = qt_mat_prof_tec
         self.qt_mat_eja = qt_mat_eja
         self.qt_mat_esp = qt_mat_esp
+        self.nu_ano_censo = nu_ano_censo
 
-    def toDict(self):
-        return {
-        "co_entidade": self.no_entidade,
-        "no_entidade": self.no_entidade,
-        "co_uf": self.co_uf,
-        "no_uf": self.no_uf,
-        "sg_uf": self.sg_uf,
-        "co_municipio": self.co_municipio,
-        "no_municipio": self.no_municipio,
-        "co_mesorregiao": self.co_mesorregiao,
-        "no_mesorregiao": self.no_mesorregiao,
-        "co_microrregiao": self.co_microrregiao,
-        "no_microrregiao": self.no_microrregiao,
-        "qt_mat_bas": self.qt_mat_bas,
-        "qt_mat_inf": self.qt_mat_inf,
-        "qt_mat_fund": self.qt_mat_fund,
-        "qt_mat_med": self.qt_mat_med,
-        "qt_mat_med_ct": self.qt_mat_med_ct,
-        "qt_mat_med_nm": self.qt_mat_med_nm,
-        "qt_mat_prof": self.qt_mat_prof,
-        "qt_mat_prof_tec": self.qt_mat_prof_tec,
-        "qt_mat_eja": self.qt_mat_eja,
-        "qt_mat_esp": self.qt_mat_esp
-        } 
-         
     
-
 
 class InstituicaoEnsinoSchema(Schema):
     co_entidade = fields.Integer(required=True, 
                                  error_messages={"required": "Código da Entidade é obrigatório."})
     no_entidade = fields.String(validate=validate.Length(min=2, max=100),
                                 required=True, error_messages={"required": "Nome da Entidade é obrigatório."})
-    co_uf = fields.Integer(required=True, error_messages={
-                                 "required": "Código da UF é obrigatório."})
-    no_uf = fields.String(validate=validate.Length(min=2, max=50),
-                                required=True, error_messages={"required": "Nome da UF é obrigatório."})
-    sg_uf = fields.String(validate=validate.Length(min=2, max=2),
-                                required=True, error_messages={"required": "Sigla da UF é obrigatório."})
-    co_municipio = fields.Integer(required=True, error_messages={
-                                 "required": "Código do Município é obrigatório."})
-    no_municipio = fields.String(validate=validate.Length(min=2, max=150),
-                                required=True, error_messages={"required": "Nome do Município é obrigatório."})
-    co_mesorregiao = fields.Integer(required=True, error_messages={
-                                 "required": "Código da Mesorregião é obrigatório."})
-    no_mesorregiao = fields.String(validate=validate.Length(min=2, max=100),
-                                required=True, error_messages={"required": "Nome da Mesorregião é obrigatório."})
-    co_microrregiao = fields.Integer(required=True, error_messages={
-                                 "required": "Código da Microrregião é obrigatório."})
-    no_microrregiao = fields.String(validate=validate.Length(min=2, max=100),
-                                required=True, error_messages={"required": "Nome da Microrregião é obrigatório."})
+    
+    uf = fields.Nested("UfSchema",only=["co_uf", "no_uf", "sg_uf"])
+    municipios = fields.Nested("MunicipioSchema", only=["co_municipio","no_municipio"])
+    mesorregiao = fields.Nested("MesorregiaoSchema", only=["co_mesorregiao","no_mesorregiao"] )
+    microrregiao = fields.Nested("MicrorregiaoSchema", only=["co_microrregiao", "no_microrregiao"])
+    
     qt_mat_bas = fields.Integer(required=True, error_messages={
                                  "required": "Quantidade de matricula básicas é obrigatório."})
     qt_mat_inf = fields.Integer(required=True, error_messages={
@@ -124,3 +128,5 @@ class InstituicaoEnsinoSchema(Schema):
                                  "required": "Quantidade de matricula eja é obrigatório."})
     qt_mat_esp = fields.Integer(required=True, error_messages={
                                  "required": "Quantidade de matricula especial é obrigatório."})
+    nu_ano_censo = fields.Integer(required=True, error_messages={
+                                 "required": "Ano do censo é obrigatório."})

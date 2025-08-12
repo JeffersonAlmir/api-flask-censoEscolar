@@ -1,8 +1,15 @@
 import requests
 import psycopg2
+from sqlalchemy.exc import SQLAlchemyError
 
-from helpers.database import connectDb
+from helpers.database import db
+from helpers.application import app
 from helpers.logging import logger
+import models.InstituicaoEnsino
+import models.Microrregiao
+import models.Municipio
+import models.Uf
+from models.Mesorregiao import Mesorregiao
 
 def extrator(url):
     requisicao = requests.get(url)
@@ -11,25 +18,23 @@ def extrator(url):
 
 def armazenarDados(dados):
 
-    mesorregiaoList = [(mesorregiao['id'], mesorregiao['nome'],
-                         mesorregiao['UF']['id']) for mesorregiao  in dados]
-    
-    try:
-        connection = connectDb()
-        cursor = connection.cursor()  
-        cursor.executemany("""INSERT INTO Mesorregiao(CO_MESORREGIAO, NO_MESORREGIAO, CO_UF) VALUES (%s ,%s, %s);""",mesorregiaoList)
-        
-        connection.commit()
-        logger.info(f"Mesorregião inseridas com sucesso: {len(mesorregiaoList)} registros")
+    mesorregiaoList = [{"co_mesorregiao":mesorregiao['id'], "no_mesorregiao":mesorregiao['nome'],
+                         "co_uf":mesorregiao['UF']['id']} for mesorregiao  in dados]
+    with app.app_context():
+        try:
 
-    except psycopg2.Error as e:
-        connection.rollback()
-        logger.error(f"Erro: {e.pgerror}") 
-    finally:
-        cursor.close()
-        connection.close()
-    
-        
+            stmt = db.insert(Mesorregiao)
+            db.session.execute(stmt,mesorregiaoList)
+            db.session.commit()
+            
+            logger.info(f"Mesorregião inseridas com sucesso: {len(mesorregiaoList)} registros")
+
+        except SQLAlchemyError as e:
+                db.session.rollback()
+                logger.error(f"Erro no banco de dados: {e}")
+                return {"mensagem": "Problema com o banco de dados."}, 500 
+        finally:
+                db.session.close()
 
 
 if __name__ == "__main__":
