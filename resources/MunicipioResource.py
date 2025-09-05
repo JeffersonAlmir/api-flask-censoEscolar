@@ -70,6 +70,7 @@ class MunicipioMatriculasResource(Resource):
         try:
             ano_censo = request.args.get("ano", default=2023, type = int)
             sigla = request.args.get("sigla",'', type = str)
+            
             stmt =(
                 db.select(
                     Municipio.co_municipio,

@@ -202,8 +202,8 @@ def importar_dados_seguro():
                 
                
                 atualizarMicro_e_Meso(dataList)
-                
                 adicionarFk()
+                
                 
         except Exception as e:
             logger.error(f"Falha na importação: {str(e)}")

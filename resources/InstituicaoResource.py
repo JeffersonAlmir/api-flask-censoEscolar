@@ -11,6 +11,7 @@ from models.Uf import Uf
 from models.Municipio import Municipio
 from models.InstituicaoEnsino import InstituicaoEnsino, instituicao_fields, InstituicaoEnsinoSchema, ano_fields
 
+instituicaoEnsino_schema = InstituicaoEnsinoSchema()
 
 class InstituicoesResource(Resource):
     def get(self):
@@ -25,7 +26,8 @@ class InstituicoesResource(Resource):
             stmt = db.select(InstituicaoEnsino).limit(limit).offset(offset)
             result = db.session.execute(stmt).scalars()
             instituicoes = result.all()
-            return marshal(instituicoes, instituicao_fields),200
+            validacao = marshal(instituicoes, instituicao_fields)
+            return {"paginate":page,"quantidade":limit,"data":validacao},200
         
         except SQLAlchemyError as e:  
             logger.error(f"Erro no banco de dados: {e}")
@@ -36,11 +38,11 @@ class InstituicoesResource(Resource):
     def post(self):
         logger.info("Post - Instituições")
     
-        instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
+        # instituicaoEnsinoSchema = InstituicaoEnsinoSchema()
         instituicaoData = request.get_json()
 
         try:
-            instituicaoJson = instituicaoEnsinoSchema.load(instituicaoData) 
+            instituicaoJson = instituicaoEnsino_schema.load(instituicaoData) 
 
             subquery = db.select(InstituicaoEnsino.co_entidade).where(InstituicaoEnsino.co_entidade == instituicaoJson["co_entidade"]).exists()
             stmt = db.select(subquery)
