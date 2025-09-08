@@ -4,7 +4,7 @@ from helpers.CORS import cors
 from helpers.database import db
 from resources.IndexResource import IndexResource
 from resources.InstituicaoResource import InstituicoesResource, InstituicoesAno
-from resources.UfResource import UfsResource, UfMatriculasResource
+from resources.UfResource import UfsResource, UfMatriculasResource, UfQuantidadesResource
 from resources.MunicipioResource import MunicipiosResource , MunicipioMatriculasResource
 from resources.MesorregiaoResource import MesorregioesResource
 
@@ -23,6 +23,8 @@ api.add_resource(InstituicoesAno, '/instituicaoAnos')
 
 api.add_resource(UfsResource,'/ufs')
 api.add_resource(UfMatriculasResource, '/uf/matriculas')
+api.add_resource(UfQuantidadesResource,'/uf/total_municipios_matriculas')
+
 
 
 

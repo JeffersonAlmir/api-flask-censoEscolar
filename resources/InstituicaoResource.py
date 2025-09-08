@@ -2,9 +2,10 @@ from flask import request
 from flask_restful import Resource , marshal
 from marshmallow import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
-import psycopg2
+
 
 from helpers.database import db
+from helpers.database import cache
 from helpers.logging import logger
 
 from models.Uf import Uf
@@ -17,16 +18,26 @@ class InstituicoesResource(Resource):
     def get(self):
        
         logger.info("Get - Instituições")
-
         try:
+
             page = request.args.get("page",1, type = int)
             limit = request.args.get("limit",1, type = int)
             offset = (page -1) * limit
-    
+
+            cache_key = f"instituicoes_page:{page}"
+            cache_data = cache.get(cache_key)
+
+            if cache_data:
+                logger.info(f"CACHE HIT para a chave {cache_key}")
+                return cache_data, 200
+
+            logger.info(f"CACHE MISS para a chave {cache_key}")
             stmt = db.select(InstituicaoEnsino).limit(limit).offset(offset)
             result = db.session.execute(stmt).scalars()
             instituicoes = result.all()
             validacao = marshal(instituicoes, instituicao_fields)
+
+            cache.set(cache_key, validacao,timeout =3600)
             return {"paginate":page,"quantidade":limit,"data":validacao},200
         
         except SQLAlchemyError as e:  
@@ -105,23 +116,7 @@ class InstituicoesResource(Resource):
             logger.error(f"Erro no banco de dados: {e}")
             return {"mensagem": "Problema com o banco de dados."}, 500
         
-    # def get():
-    #     logger.info("Get Ano")
-    #     try:
-
-    #         cursor = getConnection().cursor()
-    #         cursor.execute("""
-    #             SELECT DISTINCT e.ano_censo FROM entidades e
-    #             ORDER BY e.ano_censo DESC;
-    #         """)
-
-    #         anos = [ano for ano in cursor.fetchall()]
-    #         return {"anos": anos}
-        
-    #     except psycopg2.Error as e:  
-    #         logger.error(f"Erro no banco de dados: {e}")
-    #         return {"mensagem": "Problema com o banco de dados."}, 500
-
+    
 
 
 
