@@ -39,8 +39,6 @@ api.add_resource(MunicipioMatriculasResource,'/municipio/matriculas')
 
 
 
-with app.app_context():
-    db.create_all()
 
 
 
